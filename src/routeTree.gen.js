@@ -17,6 +17,7 @@ import { Route as AppLearningsRouteImport } from './routes/_app.learnings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppRepositoriesIndexRouteImport } from './routes/_app.repositories.index'
 import { Route as AppRepositoriesRepoIdRouteImport } from './routes/_app.repositories.$repoId'
+import { Route as AppReportsReviewIdRouteImport } from './routes/_app.reports.$reviewId'
 import { Route as AppRepositoriesRepoIdPullsPrNumberRouteImport } from './routes/_app.repositories.$repoId.pulls.$prNumber'
 
 const AppRoute = AppRouteImport.update({
@@ -58,12 +59,25 @@ const AppRepositoriesRepoIdRoute = AppRepositoriesRepoIdRouteImport.update({
   path: '/repositories/$repoId',
   getParentRoute: () => AppRoute,
 })
+const AppReportsReviewIdRoute = AppReportsReviewIdRouteImport.update({
+  id: '/$reviewId',
+  path: '/$reviewId',
+  getParentRoute: () => AppReportsRoute,
+})
 const AppRepositoriesRepoIdPullsPrNumberRoute =
   AppRepositoriesRepoIdPullsPrNumberRouteImport.update({
     id: '/pulls/$prNumber',
     path: '/pulls/$prNumber',
     getParentRoute: () => AppRepositoriesRepoIdRoute,
   })
+
+const AppReportsRouteChildren = {
+  AppReportsReviewIdRoute: AppReportsReviewIdRoute,
+}
+
+const AppReportsRouteWithChildren = AppReportsRoute._addFileChildren(
+  AppReportsRouteChildren,
+)
 
 const AppRepositoriesRepoIdRouteChildren = {
   AppRepositoriesRepoIdPullsPrNumberRoute:
@@ -78,7 +92,7 @@ const AppRepositoriesRepoIdRouteWithChildren =
 const AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppLearningsRoute: AppLearningsRoute,
-  AppReportsRoute: AppReportsRoute,
+  AppReportsRoute: AppReportsRouteWithChildren,
   AppSettingsRoute: AppSettingsRoute,
   AppRepositoriesRepoIdRoute: AppRepositoriesRepoIdRouteWithChildren,
   AppRepositoriesIndexRoute: AppRepositoriesIndexRoute,

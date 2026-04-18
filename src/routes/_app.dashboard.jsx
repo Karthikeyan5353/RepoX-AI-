@@ -23,6 +23,7 @@ function DashboardPage() {
     const [timeRange, setTimeRange] = useState("30");
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("overview");
+    const [notificationOpen, setNotificationOpen] = useState(false);
     const token = getGitHubToken();
     useEffect(() => {
         setReviews(getReviews());
@@ -35,7 +36,12 @@ function DashboardPage() {
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             r = r.filter((rv) => rv.repoFullName.toLowerCase().includes(q) ||
-                rv.fileName.toLowerCase().includes(q));
+                rv.fileName.toLowerCase().includes(q) ||
+                String(rv.prNumber).includes(q) ||
+                rv.issues.some((issue) => issue.title.toLowerCase().includes(q) ||
+                    issue.description.toLowerCase().includes(q) ||
+                    issue.category.toLowerCase().includes(q) ||
+                    issue.severity.toLowerCase().includes(q)));
         }
         return r;
     }, [reviews, timeRange, searchQuery]);
@@ -177,12 +183,15 @@ function DashboardPage() {
             </div>
           </div>
           {/* Notification bell */}
-          <button className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card hover:bg-accent transition-colors relative">
-            <Bell className="h-4 w-4 text-muted-foreground"/>
-            {totalIssues > 0 && (<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-                {totalIssues > 9 ? "9+" : totalIssues}
-              </span>)}
-          </button>
+          <div className="relative">
+            <button onClick={() => setNotificationOpen((open) => !open)} aria-label="Show review notifications" className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card hover:bg-accent transition-colors relative">
+              <Bell className="h-4 w-4 text-muted-foreground"/>
+              {totalIssues > 0 && (<span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+                  {totalIssues > 9 ? "9+" : totalIssues}
+                </span>)}
+            </button>
+            {notificationOpen && (<NotificationPanel reviews={filteredReviews} totalIssues={totalIssues}/>)}
+          </div>
         </div>
       </div>
 
@@ -201,7 +210,7 @@ function DashboardPage() {
           </button>))}
       </div>
 
-      {activeTab === "overview" && (<OverviewTab uniqueRepos={uniqueRepos} uniquePRs={uniquePRs} totalFiles={totalFiles} filesWithIssues={filesWithIssues} totalIssues={totalIssues} learningCount={learningCount} timeSavedHours={timeSavedHours} timeSavedMins={timeSavedMins} qualityScore={qualityScore} prSuccessRate={prSuccessRate} severityPieData={severityPieData} severityCounts={severityCounts} categoryBarData={categoryBarData} activityData={activityData} reviews={reviews} filteredReviews={filteredReviews}/>)}
+      {activeTab === "overview" && (<OverviewTab uniqueRepos={uniqueRepos} uniquePRs={uniquePRs} totalFiles={totalFiles} filesWithIssues={filesWithIssues} totalIssues={totalIssues} learningCount={learningCount} timeSavedHours={timeSavedHours} timeSavedMins={timeSavedMins} qualityScore={qualityScore} prSuccessRate={prSuccessRate} severityPieData={severityPieData} severityCounts={severityCounts} categoryBarData={categoryBarData} activityData={activityData} filteredReviews={filteredReviews}/>)}
 
       {activeTab === "analytics" && (<AnalyticsTab weeklyData={weeklyData} languageData={languageData} activityData={activityData} filteredReviews={filteredReviews} totalIssues={totalIssues} uniquePRs={uniquePRs}/>)}
 
@@ -213,7 +222,7 @@ function DashboardPage() {
 /* ═══════════════════════════════════════════════════
    OVERVIEW TAB
    ═══════════════════════════════════════════════════ */
-function OverviewTab({ uniqueRepos, uniquePRs, totalFiles, filesWithIssues, totalIssues, learningCount, timeSavedHours, timeSavedMins, qualityScore, prSuccessRate, severityPieData, severityCounts, categoryBarData, activityData, reviews, filteredReviews, }) {
+function OverviewTab({ uniqueRepos, uniquePRs, totalFiles, filesWithIssues, totalIssues, learningCount, timeSavedHours, timeSavedMins, qualityScore, prSuccessRate, severityPieData, severityCounts, categoryBarData, activityData, filteredReviews, }) {
     return (<div className="space-y-6">
       {/* Row 1: Key metrics */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -354,8 +363,8 @@ function OverviewTab({ uniqueRepos, uniquePRs, totalFiles, filesWithIssues, tota
 
       {/* Row 5: Recent Reviews */}
       <MetricCard title="RECENT REVIEWS" icon={<Info className="h-4 w-4 text-muted-foreground"/>}>
-        {reviews.length === 0 ? (<EmptyChart label="No reviews yet. Go review a PR!"/>) : (<div className="space-y-2">
-            {reviews.slice(0, 10).map((r) => (<div key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 hover:bg-muted/50 transition-colors">
+        {filteredReviews.length === 0 ? (<EmptyChart label="No reviews match this search or time range"/>) : (<div className="space-y-2">
+            {filteredReviews.slice(0, 10).map((r) => (<Link key={r.id} to="/reports/$reviewId" params={{ reviewId: r.id }} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 hover:border-primary/40 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${CHART_COLORS.indigo}15` }}>
                     <FileSearch className="h-4 w-4" style={{ color: CHART_COLORS.indigo }}/>
@@ -380,7 +389,7 @@ function OverviewTab({ uniqueRepos, uniquePRs, totalFiles, filesWithIssues, tota
                     {new Date(r.timestamp).toLocaleDateString()}
                   </span>
                 </div>
-              </div>))}
+              </Link>))}
           </div>)}
       </MetricCard>
     </div>);
@@ -682,5 +691,37 @@ function SeverityRow({ label, count, color, total }) {
       </div>
       <span className="text-sm font-bold w-8 text-right">{count}</span>
       <span className="text-xs text-muted-foreground w-10 text-right">{pct}%</span>
+    </div>);
+}
+
+function NotificationPanel({ reviews, totalIssues }) {
+    const issueReviews = reviews.filter((review) => review.issues.length > 0).slice(0, 6);
+    return (<div className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-border bg-card p-3 shadow-2xl shadow-black/30">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">Review alerts</p>
+          <p className="text-xs text-muted-foreground">
+            {totalIssues} issue{totalIssues !== 1 ? "s" : ""} in this range
+          </p>
+        </div>
+        <AlertTriangle className="h-4 w-4" style={{ color: CHART_COLORS.amber }}/>
+      </div>
+
+      {issueReviews.length === 0 ? (<div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
+          <CheckCircle2 className="mx-auto mb-2 h-7 w-7" style={{ color: CHART_COLORS.green }}/>
+          <p className="text-xs text-muted-foreground">No active issue notifications</p>
+        </div>) : (<div className="space-y-2">
+          {issueReviews.map((review) => (<Link key={review.id} to="/reports/$reviewId" params={{ reviewId: review.id }} className="block rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:border-primary/40 hover:bg-muted/50">
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-xs font-medium">{review.repoFullName}</p>
+                <span className="shrink-0 text-[11px] font-semibold text-warning">
+                  {review.issues.length} issue{review.issues.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                #{review.prNumber} · {review.fileName}
+              </p>
+            </Link>))}
+        </div>)}
     </div>);
 }
