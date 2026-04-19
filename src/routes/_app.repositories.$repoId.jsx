@@ -7,10 +7,15 @@ import { FileExplorer } from "@/components/FileExplorer";
 import { FileViewer } from "@/components/FileViewer";
 import { RepoChat } from "@/components/RepoChat";
 export const Route = createFileRoute("/_app/repositories/$repoId")({
+    validateSearch: (search) => ({
+        tab: ["pulls", "files", "branches", "chat"].includes(search.tab) ? search.tab : "pulls",
+    }),
     component: RepoDetailPage,
 });
 function RepoDetailPage() {
     const { repoId } = Route.useParams();
+    const { tab } = Route.useSearch();
+    const navigate = Route.useNavigate();
     const fullName = repoId.replace("---", "/");
     const [owner, repo] = fullName.split("/");
     const token = getGitHubToken();
@@ -19,11 +24,22 @@ function RepoDetailPage() {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [prFilter, setPrFilter] = useState("all");
-    const [tab, setTab] = useState("pulls");
     const [selectedBranch, setSelectedBranch] = useState("");
     // File viewer state
     const [viewingFile, setViewingFile] = useState(null);
     const [fileContext, setFileContext] = useState("");
+    const setTab = (nextTab) => {
+        setViewingFile(null);
+        navigate({ search: (prev) => ({ ...prev, tab: nextTab }) });
+    };
+    useEffect(() => {
+        setRepoData(null);
+        setPrs([]);
+        setBranches([]);
+        setSelectedBranch("");
+        setViewingFile(null);
+        setFileContext("");
+    }, [repoId]);
     useEffect(() => {
         if (!token)
             return;
@@ -37,12 +53,12 @@ function RepoDetailPage() {
             setRepoData(r);
             setPrs(p);
             setBranches(b);
-            if (!selectedBranch && r.default_branch) {
-                setSelectedBranch(r.default_branch);
+            if (r.default_branch) {
+                setSelectedBranch((current) => current || r.default_branch);
             }
         })
             .finally(() => setLoading(false));
-    }, [token, prFilter]);
+    }, [token, owner, repo, prFilter]);
     const handleFileSelect = (path, content) => {
         setViewingFile({ path, content });
         setFileContext(content);
@@ -105,7 +121,7 @@ function RepoDetailPage() {
             </div>
             {selectedBranch && token && (<FileExplorer token={token} owner={owner} repo={repo} branch={selectedBranch} onFileSelect={handleFileSelect}/>)}
           </div>) : tab === "branches" ? (<BranchesTab branches={branches} defaultBranch={repoData?.default_branch}/>) : tab === "chat" ? (<div className="h-full">
-            <RepoChat repoFullName={fullName} fileContext={fileContext}/>
+            <RepoChat key={fullName} repoFullName={fullName} fileContext={fileContext}/>
           </div>) : null}
       </div>
     </div>);

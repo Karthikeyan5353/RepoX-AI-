@@ -7,6 +7,11 @@ export function RepoChat({ repoFullName, fileContext }) {
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef(null);
     useEffect(() => {
+        setMessages([]);
+        setInput("");
+        setLoading(false);
+    }, [repoFullName]);
+    useEffect(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }, [messages]);
     const handleSend = async () => {
