@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { FileCode, Bot, Loader2, CheckCircle, AlertTriangle, Info, ChevronDown, ChevronRight, X, } from "lucide-react";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { reviewCode } from "@/lib/ai-review";
 import { saveReview, saveLearning, } from "@/lib/storage";
 export function FileViewer({ path, content, repoFullName, onClose }) {
     const [reviewing, setReviewing] = useState(false);
     const [issues, setIssues] = useState(null);
+    const [reviewError, setReviewError] = useState("");
     const lines = content.split("\n");
     const getLanguage = (filename) => {
         const ext = filename.split(".").pop()?.toLowerCase();
@@ -17,6 +19,7 @@ export function FileViewer({ path, content, repoFullName, onClose }) {
     };
     const handleReview = async () => {
         setReviewing(true);
+        setReviewError("");
         try {
             // Create a pseudo-patch from the full file for review
             const patch = content
@@ -48,7 +51,9 @@ export function FileViewer({ path, content, repoFullName, onClose }) {
             });
         }
         catch (e) {
-            console.error("Review failed:", e instanceof Error ? e.message : e);
+            const message = e instanceof Error ? e.message : "Review failed. Please try again.";
+            setReviewError(message);
+            console.error("Review failed:", message);
         }
         finally {
             setReviewing(false);
@@ -71,9 +76,9 @@ export function FileViewer({ path, content, repoFullName, onClose }) {
         </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <PanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
         {/* Code view */}
-        <div className="flex-1 overflow-auto scrollbar-thin">
+        <Panel defaultSize={issues !== null || reviewError ? "68%" : "100%"} minSize="42%" className="overflow-auto scrollbar-thin">
           <div className="font-mono text-xs">
             {lines.map((line, i) => {
             const lineIssues = issues?.filter((iss) => iss.line === i + 1) || [];
@@ -94,20 +99,36 @@ export function FileViewer({ path, content, repoFullName, onClose }) {
                 </div>);
         })}
           </div>
-        </div>
+        </Panel>
 
         {/* AI review panel */}
-        {issues !== null && (<div className="w-72 shrink-0 overflow-auto border-l border-border bg-card scrollbar-thin p-3">
+        {(issues !== null || reviewError) && (<>
+          <ReviewResizeHandle />
+          <Panel defaultSize="32%" minSize="380px" maxSize="50%" className="min-w-96 overflow-auto border-l border-border bg-card scrollbar-thin p-3">
             <p className="mb-3 text-xs font-semibold">AI Review Results</p>
-            {issues.length === 0 ? (<div className="py-8 text-center">
+            {reviewError ? (<div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive"/>
+                  <div>
+                    <p className="text-xs font-semibold text-destructive">Review unavailable</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{reviewError}</p>
+                  </div>
+                </div>
+              </div>) : issues.length === 0 ? (<div className="py-8 text-center">
                 <CheckCircle className="mx-auto mb-2 h-8 w-8 text-primary"/>
                 <p className="text-xs text-muted-foreground">No issues found!</p>
               </div>) : (<div className="space-y-2">
                 {issues.map((issue, i) => (<FileIssueCard key={i} issue={issue}/>))}
               </div>)}
-          </div>)}
-      </div>
+          </Panel>
+        </>)}
+      </PanelGroup>
     </div>);
+}
+function ReviewResizeHandle() {
+    return (<PanelResizeHandle className="group relative w-2 shrink-0 bg-border/40 transition-colors hover:bg-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <span className="absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-border transition-colors group-hover:bg-primary/70"/>
+    </PanelResizeHandle>);
 }
 function FileIssueCard({ issue }) {
     const [expanded, setExpanded] = useState(false);

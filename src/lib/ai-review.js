@@ -71,37 +71,53 @@ async function createGeminiCompletion(config, messages) {
         role: message.role === "assistant" ? "model" : "user",
         parts: [{ text: message.content }],
     }));
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`, {
-        method: "POST",
-        headers: {
-            "x-goog-api-key": config.apiKey,
-            "Content-Type": "application/json",
+    const requestBody = JSON.stringify({
+        ...(systemInstruction
+            ? { systemInstruction: { parts: [{ text: systemInstruction.content }] } }
+            : {}),
+        contents,
+        generationConfig: {
+            temperature: 0.2,
         },
-        body: JSON.stringify({
-            ...(systemInstruction
-                ? { systemInstruction: { parts: [{ text: systemInstruction.content }] } }
-                : {}),
-            contents,
-            generationConfig: {
-                temperature: 0.2,
-            },
-        }),
     });
-    if (!response.ok) {
-        const text = await response.text();
-        console.error("Gemini API error:", response.status, text);
-        if (response.status === 429) {
-            throw new Error("Gemini rate limit reached. Please wait and try again.");
+    let lastErrorText = "";
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`, {
+            method: "POST",
+            headers: {
+                "x-goog-api-key": config.apiKey,
+                "Content-Type": "application/json",
+            },
+            body: requestBody,
+        });
+        if (response.ok) {
+            const result = await response.json();
+            return (result.candidates?.[0]?.content?.parts
+                ?.map((part) => part.text ?? "")
+                .join("") || "");
         }
+        const text = await response.text();
+        lastErrorText = text;
+        console.error("Gemini API error:", response.status, text);
         if (response.status === 400 && text.includes("API key not valid")) {
             throw new Error("Gemini API key is invalid. Check GEMINI_API_KEY in .env and restart the dev server.");
         }
+        if (response.status === 429 || response.status === 503) {
+            if (attempt < 3) {
+                await sleep(1000 * 2 ** attempt);
+                continue;
+            }
+            if (response.status === 429) {
+                throw new Error("Gemini rate limit reached. Please wait a minute and try again.");
+            }
+            throw new Error("Gemini is temporarily overloaded. Please try again in a minute, or set GEMINI_MODEL to another available Gemini model.");
+        }
         throw new Error(`Gemini request failed: ${response.status}`);
     }
-    const result = await response.json();
-    return (result.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text ?? "")
-        .join("") || "");
+    throw new Error(`Gemini request failed after retries: ${lastErrorText}`);
+}
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function localReview(filename, patch) {
     const issues = [];

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, FileCode, Send, Bot, Loader2, AlertTriangle, CheckCircle, Info, ChevronDown, ChevronRight, } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { getGitHubToken } from "@/lib/storage";
 import { fetchPullRequest, fetchPRFiles, postPRComment, } from "@/lib/github";
 import { saveReview, saveLearning, } from "@/lib/storage";
@@ -14,6 +15,7 @@ export function PRReviewView({ fullName, prNumber }) {
     const [loading, setLoading] = useState(true);
     const [reviewing, setReviewing] = useState(false);
     const [reviewResults, setReviewResults] = useState({});
+    const [reviewErrors, setReviewErrors] = useState({});
     const [posting, setPosting] = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
     useEffect(() => {
@@ -36,6 +38,7 @@ export function PRReviewView({ fullName, prNumber }) {
         if (!token || !selectedFile?.patch)
             return;
         setReviewing(true);
+        setReviewErrors((prev) => ({ ...prev, [selectedFile.filename]: "" }));
         try {
             const issues = await reviewCode(selectedFile.filename, selectedFile.patch);
             setReviewResults((prev) => ({ ...prev, [selectedFile.filename]: issues }));
@@ -63,7 +66,9 @@ export function PRReviewView({ fullName, prNumber }) {
             });
         }
         catch (e) {
-            console.error("Review failed:", e instanceof Error ? e.message : e);
+            const message = e instanceof Error ? e.message : "Review failed. Please try again.";
+            setReviewErrors((prev) => ({ ...prev, [selectedFile.filename]: message }));
+            console.error("Review failed:", message);
         }
         finally {
             setReviewing(false);
@@ -94,6 +99,7 @@ export function PRReviewView({ fullName, prNumber }) {
       </div>);
     }
     const currentIssues = selectedFile ? reviewResults[selectedFile.filename] : null;
+    const currentError = selectedFile ? reviewErrors[selectedFile.filename] : "";
     return (<div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -118,9 +124,9 @@ export function PRReviewView({ fullName, prNumber }) {
       </div>
 
       {/* Main content: 3 panels */}
-      <div className="flex flex-1 overflow-hidden">
+      <PanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
         {/* Left: file list */}
-        <div className="w-60 shrink-0 overflow-auto border-r border-border bg-card scrollbar-thin">
+        <Panel defaultSize="16%" minSize="180px" maxSize="28%" className="min-w-44 overflow-auto border-r border-border bg-card scrollbar-thin">
           <div className="p-3">
             <p className="mb-2 text-xs font-semibold text-muted-foreground">Changed Files</p>
             {files.map((f) => (<button key={f.sha} onClick={() => setSelectedFile(f)} className={`mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${selectedFile?.filename === f.filename
@@ -134,10 +140,11 @@ export function PRReviewView({ fullName, prNumber }) {
                 </span>
               </button>))}
           </div>
-        </div>
+        </Panel>
+        <ReviewResizeHandle />
 
         {/* Center: diff view */}
-        <div className="flex-1 overflow-auto scrollbar-thin">
+        <Panel defaultSize="52%" minSize="34%" className="overflow-auto scrollbar-thin">
           {selectedFile ? (<div className="p-4">
               <div className="mb-3 flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-muted-foreground"/>
@@ -150,10 +157,11 @@ export function PRReviewView({ fullName, prNumber }) {
             </div>) : (<div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Select a file to view
             </div>)}
-        </div>
+        </Panel>
 
         {/* Right: AI review panel */}
-        <div className="w-72 shrink-0 overflow-auto border-l border-border bg-card scrollbar-thin">
+        <ReviewResizeHandle />
+        <Panel defaultSize="32%" minSize="380px" maxSize="50%" className="min-w-96 overflow-auto border-l border-border bg-card scrollbar-thin">
           <div className="p-3">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs font-semibold">AI Review</p>
@@ -163,7 +171,15 @@ export function PRReviewView({ fullName, prNumber }) {
                 </button>)}
             </div>
 
-            {!currentIssues ? (<div className="py-8 text-center">
+            {currentError ? (<div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive"/>
+                  <div>
+                    <p className="text-xs font-semibold text-destructive">Review unavailable</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{currentError}</p>
+                  </div>
+                </div>
+              </div>) : !currentIssues ? (<div className="py-8 text-center">
                 <Bot className="mx-auto mb-2 h-8 w-8 text-muted-foreground"/>
                 <p className="text-xs text-muted-foreground">
                   Click "Review File" to analyze the selected file with AI
@@ -175,9 +191,14 @@ export function PRReviewView({ fullName, prNumber }) {
                 {currentIssues.map((issue, i) => (<IssueCard key={i} issue={issue} index={i}/>))}
               </div>)}
           </div>
-        </div>
-      </div>
+        </Panel>
+      </PanelGroup>
     </div>);
+}
+function ReviewResizeHandle() {
+    return (<PanelResizeHandle className="group relative w-2 shrink-0 bg-border/40 transition-colors hover:bg-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <span className="absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-border transition-colors group-hover:bg-primary/70"/>
+    </PanelResizeHandle>);
 }
 function severityIcon(severity) {
     switch (severity) {
