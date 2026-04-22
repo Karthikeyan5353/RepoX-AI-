@@ -3,12 +3,14 @@ const KEYS = {
     githubUser: "repox_github_user",
     reviews: "repox_reviews",
     learnings: "repox_learnings",
+    chatHistories: "repox_chat_histories",
 };
 const LEGACY_KEYS = {
     githubToken: "rabbitreview_github_token",
     githubUser: "rabbitreview_github_user",
     reviews: "rabbitreview_reviews",
     learnings: "rabbitreview_learnings",
+    chatHistories: "rabbitreview_chat_histories",
 };
 function getStoredValue(key) {
     const value = localStorage.getItem(KEYS[key]);
@@ -74,4 +76,41 @@ export function saveLearning(learning) {
 export function deleteLearning(id) {
     const learnings = getLearnings().filter((l) => l.id !== id);
     localStorage.setItem(KEYS.learnings, JSON.stringify(learnings));
+}
+export function getRepoChatHistory(repoFullName) {
+    try {
+        const histories = JSON.parse(getStoredValue("chatHistories") || "{}");
+        return histories[repoFullName]?.messages || [];
+    }
+    catch {
+        return [];
+    }
+}
+export function saveRepoChatHistory(repoFullName, messages) {
+    try {
+        const histories = JSON.parse(getStoredValue("chatHistories") || "{}");
+        histories[repoFullName] = {
+            messages: messages.slice(-100),
+            updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(KEYS.chatHistories, JSON.stringify(histories));
+    }
+    catch {
+        localStorage.setItem(KEYS.chatHistories, JSON.stringify({
+            [repoFullName]: {
+                messages: messages.slice(-100),
+                updatedAt: new Date().toISOString(),
+            },
+        }));
+    }
+}
+export function clearRepoChatHistory(repoFullName) {
+    try {
+        const histories = JSON.parse(getStoredValue("chatHistories") || "{}");
+        delete histories[repoFullName];
+        localStorage.setItem(KEYS.chatHistories, JSON.stringify(histories));
+    }
+    catch {
+        localStorage.removeItem(KEYS.chatHistories);
+    }
 }

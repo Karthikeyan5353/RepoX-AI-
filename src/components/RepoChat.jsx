@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2, Trash2 } from "lucide-react";
 import { chatWithCode } from "@/lib/ai-review";
+import { clearRepoChatHistory, getRepoChatHistory, saveRepoChatHistory } from "@/lib/storage";
 export function RepoChat({ repoFullName, fileContext }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef(null);
     useEffect(() => {
-        setMessages([]);
+        setMessages(getRepoChatHistory(repoFullName));
         setInput("");
         setLoading(false);
     }, [repoFullName]);
@@ -18,21 +19,31 @@ export function RepoChat({ repoFullName, fileContext }) {
         if (!input.trim() || loading)
             return;
         const userMsg = { role: "user", content: input.trim() };
-        setMessages((prev) => [...prev, userMsg]);
+        const nextMessages = [...messages, userMsg];
+        setMessages(nextMessages);
+        saveRepoChatHistory(repoFullName, nextMessages);
         setInput("");
         setLoading(true);
         try {
             const repoContext = `Repository: ${repoFullName}\n${fileContext ? `Current file content:\n${fileContext}` : ""}`;
-            const reply = await chatWithCode([...messages, userMsg], repoContext);
-            setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+            const reply = await chatWithCode(nextMessages, repoContext);
+            const messagesWithReply = [...nextMessages, { role: "assistant", content: reply }];
+            setMessages(messagesWithReply);
+            saveRepoChatHistory(repoFullName, messagesWithReply);
         }
         catch (e) {
             const message = e instanceof Error ? e.message : "Unable to send message.";
-            setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${message}` }]);
+            const messagesWithError = [...nextMessages, { role: "assistant", content: `Error: ${message}` }];
+            setMessages(messagesWithError);
+            saveRepoChatHistory(repoFullName, messagesWithError);
         }
         finally {
             setLoading(false);
         }
+    };
+    const handleClear = () => {
+        setMessages([]);
+        clearRepoChatHistory(repoFullName);
     };
     return (<div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -41,7 +52,7 @@ export function RepoChat({ repoFullName, fileContext }) {
           <span className="text-sm font-semibold">AI Chat</span>
           <span className="text-xs text-muted-foreground">· {repoFullName}</span>
         </div>
-        {messages.length > 0 && (<button onClick={() => setMessages([])} className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+        {messages.length > 0 && (<button onClick={handleClear} aria-label="Clear AI chat history" className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
             <Trash2 className="h-3.5 w-3.5"/>
           </button>)}
       </div>
