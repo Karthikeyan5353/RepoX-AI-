@@ -2,19 +2,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { GitPullRequest, GitBranch, ArrowLeft, ExternalLink, Clock, Plus, Minus, FolderTree, MessageSquareText, Loader2, } from "lucide-react";
 import { getGitHubToken } from "@/lib/storage";
-import { fetchPullRequests, fetchRepo, fetchBranches, } from "@/lib/github";
+import { fetchPullRequests, fetchRepo, fetchBranches, fetchFileContent, } from "@/lib/github";
 import { FileExplorer } from "@/components/FileExplorer";
 import { FileViewer } from "@/components/FileViewer";
 import { RepoChat } from "@/components/RepoChat";
 export const Route = createFileRoute("/_app/repositories/$repoId")({
     validateSearch: (search) => ({
         tab: ["pulls", "files", "branches", "chat"].includes(search.tab) ? search.tab : "pulls",
+        branch: typeof search.branch === "string" ? search.branch : undefined,
+        file: typeof search.file === "string" ? search.file : undefined,
     }),
     component: RepoDetailPage,
 });
 function RepoDetailPage() {
     const { repoId } = Route.useParams();
-    const { tab } = Route.useSearch();
+    const { tab, branch, file } = Route.useSearch();
     const navigate = Route.useNavigate();
     const fullName = repoId.replace("---", "/");
     const [owner, repo] = fullName.split("/");
@@ -24,22 +26,29 @@ function RepoDetailPage() {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [prFilter, setPrFilter] = useState("all");
-    const [selectedBranch, setSelectedBranch] = useState("");
+    const [selectedBranch, setSelectedBranch] = useState(branch || "");
     // File viewer state
     const [viewingFile, setViewingFile] = useState(null);
     const [fileContext, setFileContext] = useState("");
     const setTab = (nextTab) => {
         setViewingFile(null);
-        navigate({ search: (prev) => ({ ...prev, tab: nextTab }) });
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                tab: nextTab,
+                file: undefined,
+                branch: nextTab === "files" ? prev.branch : undefined,
+            }),
+        });
     };
     useEffect(() => {
         setRepoData(null);
         setPrs([]);
         setBranches([]);
-        setSelectedBranch("");
+        setSelectedBranch(branch || "");
         setViewingFile(null);
         setFileContext("");
-    }, [repoId]);
+    }, [repoId, branch]);
     useEffect(() => {
         if (!token)
             return;
@@ -53,15 +62,73 @@ function RepoDetailPage() {
             setRepoData(r);
             setPrs(p);
             setBranches(b);
-            if (r.default_branch) {
+            if (branch && b.some((item) => item.name === branch)) {
+                setSelectedBranch(branch);
+            }
+            else if (r.default_branch) {
                 setSelectedBranch((current) => current || r.default_branch);
             }
         })
             .finally(() => setLoading(false));
-    }, [token, owner, repo, prFilter]);
+    }, [token, owner, repo, prFilter, branch]);
+    useEffect(() => {
+        if (!selectedBranch || tab !== "files")
+            return;
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                tab: "files",
+                branch: selectedBranch,
+            }),
+            replace: true,
+        });
+    }, [navigate, selectedBranch, tab]);
+    useEffect(() => {
+        if (!file) {
+            setViewingFile(null);
+            return;
+        }
+        if (!token || !selectedBranch)
+            return;
+        if (viewingFile?.path === file)
+            return;
+        let cancelled = false;
+        fetchFileContent(token, owner, repo, file, selectedBranch)
+            .then((content) => {
+            if (cancelled)
+                return;
+            setViewingFile({ path: file, content });
+            setFileContext(content);
+        })
+            .catch((e) => {
+            if (cancelled)
+                return;
+            console.error("Failed to restore file:", e);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [file, token, selectedBranch, owner, repo, viewingFile?.path]);
     const handleFileSelect = (path, content) => {
         setViewingFile({ path, content });
         setFileContext(content);
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                tab: "files",
+                branch: selectedBranch || prev.branch,
+                file: path,
+            }),
+        });
+    };
+    const handleCloseFile = () => {
+        setViewingFile(null);
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                file: undefined,
+            }),
+        });
     };
     const tabs = [
         { key: "pulls", label: "Pull Requests", icon: GitPullRequest, count: prs.length },
@@ -79,7 +146,7 @@ function RepoDetailPage() {
     }
     // If viewing a file, show full-screen file viewer
     if (viewingFile) {
-        return (<FileViewer path={viewingFile.path} content={viewingFile.content} repoFullName={fullName} onClose={() => setViewingFile(null)}/>);
+        return (<FileViewer path={viewingFile.path} content={viewingFile.content} repoFullName={fullName} onClose={handleCloseFile}/>);
     }
     return (<div className="flex h-full flex-col">
       {/* Header */}
