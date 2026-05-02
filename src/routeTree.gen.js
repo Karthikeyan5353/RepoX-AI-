@@ -105,3 +105,12 @@ const rootRouteChildren = {
   AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)
+
+import type { getRouter } from './router.jsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
