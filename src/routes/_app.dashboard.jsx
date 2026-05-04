@@ -144,15 +144,15 @@ function DashboardPage() {
     const prSuccessRate = uniquePRs > 0 ? Math.round(((uniquePRs - Math.floor(uniquePRs * 0.15)) / uniquePRs) * 100) : 100;
     if (!token) {
         return (<div className="flex h-full items-center justify-center p-8">
-        <div className="glass-panel max-w-md rounded-[20px] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/6 bg-emerald-500/10">
+        <div className="glass-panel max-w-md rounded-[12px] p-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[12px] border border-white/6 bg-emerald-500/10">
             <GitBranch className="h-8 w-8 text-primary"/>
           </div>
           <h2 className="text-xl font-bold">Welcome to RepoX</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Connect your GitHub account to start reviewing code with AI.
           </p>
-          <Link to="/settings" className="glass-interactive mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/6 bg-linear-to-r from-emerald-500/78 to-cyan-500/70 px-4 py-2 text-sm font-medium text-primary-foreground">
+          <Link to="/settings" className="glass-interactive mt-4 inline-flex items-center gap-2 rounded-lg border border-white/6 bg-linear-to-r from-emerald-500/78 to-cyan-500/70 px-4 py-2 text-sm font-medium text-primary-foreground">
             Configure GitHub Token
           </Link>
         </div>
@@ -170,22 +170,22 @@ function DashboardPage() {
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"/>
-            <input type="text" placeholder="Search reviews..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="glass-input h-11 w-56 rounded-2xl pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/60"/>
+            <input type="text" placeholder="Search reviews..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="glass-input h-11 w-56 rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/60"/>
           </div>
           {/* Time range */}
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-muted-foreground"/>
-            <div className="glass-chip flex rounded-2xl p-1">
+            <div className="glass-chip flex rounded-lg p-1">
               {["7", "30", "90"].map((t) => (<button key={t} onClick={() => setTimeRange(t)} className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${timeRange === t
-                ? "rounded-xl border border-white/6 bg-emerald-500/10 text-white"
-                : "rounded-xl text-muted-foreground hover:bg-white/4 hover:text-foreground"}`}>
+                ? "rounded-md border border-white/6 bg-emerald-500/10 text-white"
+                : "rounded-md text-muted-foreground hover:bg-white/4 hover:text-foreground"}`}>
                   {t}d
                 </button>))}
             </div>
           </div>
           {/* Notification bell */}
           <div className="relative">
-            <button onClick={() => setNotificationOpen((open) => !open)} aria-label="Show review notifications" className="glass-chip glass-interactive relative flex h-11 w-11 items-center justify-center rounded-2xl">
+            <button onClick={() => setNotificationOpen((open) => !open)} aria-label="Show review notifications" className="glass-chip glass-interactive relative flex h-11 w-11 items-center justify-center rounded-lg">
               <Bell className="h-4 w-4 text-muted-foreground"/>
               {totalIssues > 0 && (<span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
                   {totalIssues > 9 ? "9+" : totalIssues}
@@ -197,15 +197,15 @@ function DashboardPage() {
       </div>
 
       {/* Tab navigation */}
-      <div className="glass-chip flex w-fit items-center gap-1 rounded-[18px] p-1">
+      <div className="glass-chip flex w-fit items-center gap-1 rounded-[12px] p-1">
         {[
             { key: "overview", label: "Overview", icon: BarChart3 },
             { key: "analytics", label: "Analytics", icon: Activity },
             { key: "quality", label: "Quality Metrics", icon: Target },
             { key: "premerge", label: "Pre-merge Checks", icon: Shield },
         ].map(({ key, label, icon: Icon }) => (<button key={key} onClick={() => setActiveTab(key)} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === key
-                ? "rounded-xl border border-white/6 bg-emerald-500/10 text-white"
-                : "rounded-xl text-muted-foreground hover:bg-white/4 hover:text-foreground"}`}>
+                ? "border border-white/6 bg-emerald-500/10 text-white"
+                : "text-muted-foreground hover:bg-white/4 hover:text-foreground"}`}>
             <Icon className="h-3.5 w-3.5"/>
             {label}
           </button>))}
@@ -442,21 +442,21 @@ function AnalyticsTab({ weeklyData, languageData, activityData, filteredReviews,
       {/* Developer Performance */}
       <MetricCard title="DEVELOPER PERFORMANCE" icon={<Users className="h-4 w-4 text-muted-foreground"/>}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="glass-chip rounded-[18px] p-4 text-center">
+          <div className="glass-chip rounded-[12px] p-4 text-center">
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: `${CHART_COLORS.indigo}20` }}>
               <Award className="h-6 w-6" style={{ color: CHART_COLORS.indigo }}/>
             </div>
             <p className="text-2xl font-bold">{uniquePRs}</p>
             <p className="text-xs text-muted-foreground">PRs Reviewed</p>
           </div>
-          <div className="glass-chip rounded-[18px] p-4 text-center">
+          <div className="glass-chip rounded-[12px] p-4 text-center">
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: `${CHART_COLORS.green}20` }}>
               <CheckCircle2 className="h-6 w-6" style={{ color: CHART_COLORS.green }}/>
             </div>
             <p className="text-2xl font-bold">{totalIssues}</p>
             <p className="text-xs text-muted-foreground">Issues Detected</p>
           </div>
-          <div className="glass-chip rounded-[18px] p-4 text-center">
+          <div className="glass-chip rounded-[12px] p-4 text-center">
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: `${CHART_COLORS.amber}20` }}>
               <Zap className="h-6 w-6" style={{ color: CHART_COLORS.amber }}/>
             </div>
@@ -582,7 +582,7 @@ function PremergeTab() {
     return (<div className="space-y-6">
       <MetricCard title="PRE-MERGE VALIDATION" icon={<Shield className="h-4 w-4 text-muted-foreground"/>}>
         <div className="grid gap-3 sm:grid-cols-2">
-          {checks.map((check) => (<div key={check.name} className="glass-chip glass-interactive flex items-center gap-3 rounded-[18px] p-4 transition-colors">
+          {checks.map((check) => (<div key={check.name} className="glass-chip glass-interactive flex items-center gap-3 rounded-[12px] p-4 transition-colors">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: `${check.color}15` }}>
                 <check.icon className="h-5 w-5" style={{ color: check.color }}/>
               </div>
@@ -645,7 +645,7 @@ function PremergeTab() {
    SHARED COMPONENTS
    ═══════════════════════════════════════════════════ */
 function StatCard({ label, value, icon, color, bg }) {
-    return (<div className="glass-panel glass-interactive rounded-[18px] p-3.5">
+    return (<div className="glass-panel glass-interactive rounded-[12px] p-3.5">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${bg} ${color}`}>
@@ -656,7 +656,7 @@ function StatCard({ label, value, icon, color, bg }) {
     </div>);
 }
 function MetricCard({ title, icon, children }) {
-    return (<div className="glass-panel glass-interactive rounded-[18px] p-4">
+    return (<div className="glass-panel glass-interactive rounded-[12px] p-4">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
         {icon}
@@ -697,7 +697,7 @@ function SeverityRow({ label, count, color, total }) {
 
 function NotificationPanel({ reviews, totalIssues }) {
     const issueReviews = reviews.filter((review) => review.issues.length > 0).slice(0, 6);
-    return (<div className="glass-dropdown animate-glass-in absolute right-0 top-[3.25rem] z-50 w-80 rounded-[20px] p-3">
+    return (<div className="glass-dropdown animate-glass-in absolute right-0 top-[3.25rem] z-50 w-80 rounded-[12px] p-3">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold">Review alerts</p>
@@ -708,11 +708,11 @@ function NotificationPanel({ reviews, totalIssues }) {
         <AlertTriangle className="h-4 w-4" style={{ color: CHART_COLORS.amber }}/>
       </div>
 
-      {issueReviews.length === 0 ? (<div className="glass-chip rounded-[18px] p-4 text-center">
+      {issueReviews.length === 0 ? (<div className="glass-chip rounded-[12px] p-4 text-center">
           <CheckCircle2 className="mx-auto mb-2 h-7 w-7" style={{ color: CHART_COLORS.green }}/>
           <p className="text-xs text-muted-foreground">No active issue notifications</p>
         </div>) : (<div className="space-y-2">
-          {issueReviews.map((review) => (<Link key={review.id} to="/reports/$reviewId" params={{ reviewId: review.id }} className="glass-chip glass-interactive block rounded-[18px] p-3 transition-colors hover:border-primary/40">
+          {issueReviews.map((review) => (<Link key={review.id} to="/reports/$reviewId" params={{ reviewId: review.id }} className="glass-chip glass-interactive block rounded-[12px] p-3 transition-colors hover:border-primary/40">
               <div className="flex items-center justify-between gap-3">
                 <p className="truncate text-xs font-medium">{review.repoFullName}</p>
                 <span className="shrink-0 text-[11px] font-semibold text-warning">
